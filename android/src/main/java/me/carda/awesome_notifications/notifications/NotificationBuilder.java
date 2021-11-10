@@ -36,6 +36,7 @@ import androidx.core.app.RemoteInput;
 
 import androidx.core.graphics.drawable.IconCompat;
 import androidx.core.text.HtmlCompat;
+
 import me.carda.awesome_notifications.AwesomeNotificationsPlugin;
 import me.carda.awesome_notifications.Definitions;
 import me.carda.awesome_notifications.notifications.broadcastReceivers.DismissedNotificationReceiver;
@@ -84,25 +85,25 @@ public class NotificationBuilder {
     public static List<String> isPermissionsAllowed(Context context, String channelKey, List<String> permissions) throws AwesomeNotificationException {
         List<String> allowedPermissions = new ArrayList<>();
 
-        if(isNotificationEnabled(context)) {
+        if (isNotificationEnabled(context)) {
 
             NotificationChannel channel = null;
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
 
                 channel = ChannelManager.getAndroidChannel(context, channelKey);
-                if(channel == null)
-                    throw new AwesomeNotificationException("Channel "+channelKey+" does not exists.");
+                if (channel == null)
+                    throw new AwesomeNotificationException("Channel " + channelKey + " does not exists.");
 
-                if(channel.getImportance() != NotificationManager.IMPORTANCE_NONE){
+                if (channel.getImportance() != NotificationManager.IMPORTANCE_NONE) {
 
                     for (String permission : permissions) {
 
                         NotificationPermission permissionEnum =
                                 StringUtils.getEnumFromString(NotificationPermission.class, permission);
 
-                        switch (permissionEnum){
+                        switch (permissionEnum) {
                             case Sound:
-                                if(channel.getSound() == null)
+                                if (channel.getSound() == null)
                                     continue;
 
                             case CriticalAlert:
@@ -114,16 +115,16 @@ public class NotificationBuilder {
                 }
             } else {
                 NotificationChannelModel channelModel = ChannelManager.getChannelByKey(context, channelKey);
-                if (channelModel.importance != NotificationImportance.None){
+                if (channelModel.importance != NotificationImportance.None) {
 
                     for (String permission : permissions) {
 
                         NotificationPermission permissionEnum =
                                 StringUtils.getEnumFromString(NotificationPermission.class, permission);
 
-                        switch (permissionEnum){
+                        switch (permissionEnum) {
                             case Sound:
-                                if(!channelModel.playSound)
+                                if (!channelModel.playSound)
                                     continue;
 
                             case CriticalAlert:
@@ -139,7 +140,7 @@ public class NotificationBuilder {
         return allowedPermissions;
     }
 
-    public static void showNotificationConfigPage(Context context){
+    public static void showNotificationConfigPage(Context context) {
 
         final Intent intent = new Intent();
 
@@ -148,7 +149,7 @@ public class NotificationBuilder {
             intent.putExtra(Settings.EXTRA_APP_PACKAGE, context.getPackageName());
         } else
             // Android 5 (LOLLIPOP) is now the minimum required
-            /* if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)*/{
+            /* if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)*/ {
             intent.setAction("android.settings.APP_NOTIFICATION_SETTINGS");
             intent.putExtra("app_package", context.getPackageName());
             intent.putExtra("app_uid", context.getApplicationInfo().uid);
@@ -170,8 +171,8 @@ public class NotificationBuilder {
     public Notification createNotification(Context context, NotificationModel notificationModel, boolean isSummary) throws AwesomeNotificationException {
 
         NotificationChannelModel channelModel = ChannelManager.getChannelByKey(context, notificationModel.content.channelKey);
-        if(channelModel == null)
-            throw new AwesomeNotificationException("Channel '"+ notificationModel.content.channelKey +"' does not exist or is disabled");
+        if (channelModel == null)
+            throw new AwesomeNotificationException("Channel '" + notificationModel.content.channelKey + "' does not exist or is disabled");
 
         if (notificationModel.content.id == null || notificationModel.content.id < 0)
             notificationModel.content.id = IntegerUtils.generateNextRandomId();
@@ -221,22 +222,22 @@ public class NotificationBuilder {
                 Definitions.NOTIFICATION_LAYOUT,
                 StringUtils.digestString(notificationModel.content.notificationLayout.toString()));
 
-        if(!ListUtils.isNullOrEmpty(notificationModel.content.messages)) {
+        if (!ListUtils.isNullOrEmpty(notificationModel.content.messages)) {
             Map<String, Object> contentData = notificationModel.content.toMap();
             List<Map> contentMessageData = null;
-            if(contentData.get(Definitions.NOTIFICATION_MESSAGES) instanceof List) {
+            if (contentData.get(Definitions.NOTIFICATION_MESSAGES) instanceof List) {
                 contentMessageData = (List) contentData.get(Definitions.NOTIFICATION_MESSAGES);
             }
-            if(contentMessageData != null)
+            if (contentMessageData != null)
                 finalNotification.extras.putSerializable(
-                    Definitions.NOTIFICATION_MESSAGES,
-                    (Serializable) contentMessageData);
+                        Definitions.NOTIFICATION_MESSAGES,
+                        (Serializable) contentMessageData);
         }
 
         return finalNotification;
     }
 
-    private static Class<?> getTargetClass(Context context){
+    private static Class<?> getTargetClass(Context context) {
         return getNotificationTargetActivityClass(context);
     }
 
@@ -267,7 +268,7 @@ public class NotificationBuilder {
         intent.setAction(ActionReference);
 
         Bundle extras = intent.getExtras();
-        if(extras == null)
+        if (extras == null)
             extras = new Bundle();
 
         String jsonData = notificationModel.toJson();
@@ -314,7 +315,7 @@ public class NotificationBuilder {
                     actionModel.buttonKeyInput = getButtonInputText(intent, intent.getStringExtra(Definitions.NOTIFICATION_BUTTON_KEY));
                 }
 
-                if(!StringUtils.isNullOrEmpty(actionModel.buttonKeyInput) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P /*Android 9*/) {
+                if (!StringUtils.isNullOrEmpty(actionModel.buttonKeyInput) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P /*Android 9*/) {
                     try {
                         notificationModel.remoteHistory = actionModel.buttonKeyInput;
                         notificationModel.content.isRefreshNotification = true;
@@ -343,15 +344,22 @@ public class NotificationBuilder {
         return null;
     }
 
-    public static Notification getAndroidNotificationById(Context context, int id){
-        if(context != null){
+    private static StatusBarNotification[] getActiveNotifications(NotificationManager manager) {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M) {
+            return new StatusBarNotification[0];
+        }
+        return manager.getActiveNotifications();
+    }
+
+    public static Notification getAndroidNotificationById(Context context, int id) {
+        if (context != null) {
 
             NotificationManager manager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
-            StatusBarNotification[] currentActiveNotifications = manager.getActiveNotifications();
+            StatusBarNotification[] currentActiveNotifications = getActiveNotifications(manager);
 
-            if(currentActiveNotifications != null){
+            if (currentActiveNotifications != null) {
                 for (StatusBarNotification activeNotification : currentActiveNotifications) {
-                    if(activeNotification.getId() == id){
+                    if (activeNotification.getId() == id) {
                         return activeNotification.getNotification();
                     }
                 }
@@ -360,16 +368,16 @@ public class NotificationBuilder {
         return null;
     }
 
-    public static List<Notification> getAllAndroidActiveNotificationsByChannelKey(Context context, String channelKey){
+    public static List<Notification> getAllAndroidActiveNotificationsByChannelKey(Context context, String channelKey) {
         List<Notification> notifications = new ArrayList<>();
-        if(context != null && !StringUtils.isNullOrEmpty(channelKey)){
+        if (context != null && !StringUtils.isNullOrEmpty(channelKey)) {
 
             NotificationManager manager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
-            StatusBarNotification[] currentActiveNotifications = manager.getActiveNotifications();
+            StatusBarNotification[] currentActiveNotifications = getActiveNotifications(manager);
 
             String hashedKey = StringUtils.digestString(channelKey);
 
-            if(currentActiveNotifications != null){
+            if (currentActiveNotifications != null) {
                 for (StatusBarNotification activeNotification : currentActiveNotifications) {
 
                     Notification notification = activeNotification.getNotification();
@@ -377,7 +385,7 @@ public class NotificationBuilder {
                     String notificationChannelKey = notification.extras
                             .getString(Definitions.NOTIFICATION_CHANNEL_KEY);
 
-                    if(notificationChannelKey != null && notificationChannelKey.equals(hashedKey)){
+                    if (notificationChannelKey != null && notificationChannelKey.equals(hashedKey)) {
                         notifications.add(notification);
                     }
                 }
@@ -386,16 +394,16 @@ public class NotificationBuilder {
         return notifications;
     }
 
-    public static List<Notification> getAllAndroidActiveNotificationsByGroupKey(Context context, String groupKey){
+    public static List<Notification> getAllAndroidActiveNotificationsByGroupKey(Context context, String groupKey) {
         List<Notification> notifications = new ArrayList<>();
-        if(context != null && !StringUtils.isNullOrEmpty(groupKey)){
+        if (context != null && !StringUtils.isNullOrEmpty(groupKey)) {
 
             NotificationManager manager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
-            StatusBarNotification[] currentActiveNotifications = manager.getActiveNotifications();
+            StatusBarNotification[] currentActiveNotifications = getActiveNotifications(manager);
 
             String hashedKey = StringUtils.digestString(groupKey);
 
-            if(currentActiveNotifications != null){
+            if (currentActiveNotifications != null) {
                 for (StatusBarNotification activeNotification : currentActiveNotifications) {
 
                     Notification notification = activeNotification.getNotification();
@@ -403,7 +411,7 @@ public class NotificationBuilder {
                     String notificationGroupKey = notification.extras
                             .getString(Definitions.NOTIFICATION_GROUP_KEY);
 
-                    if(notificationGroupKey != null && notificationGroupKey.equals(hashedKey)){
+                    if (notificationGroupKey != null && notificationGroupKey.equals(hashedKey)) {
                         notifications.add(notification);
                     }
                 }
@@ -412,58 +420,61 @@ public class NotificationBuilder {
         return notifications;
     }
 
-    public static String getAppName(Context context){
+    public static String getAppName(Context context) {
         ApplicationInfo applicationInfo = context.getApplicationInfo();
         int stringId = applicationInfo.labelRes;
         return stringId == 0 ? applicationInfo.nonLocalizedLabel.toString() : context.getString(stringId);
     }
 
-    public static void wakeUpScreen(Context context){
+    public static void wakeUpScreen(Context context) {
 
-        PowerManager pm = (PowerManager)context.getSystemService(Context.POWER_SERVICE);
+        PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
         boolean isScreenOn = pm.isInteractive();
-        if(!isScreenOn)
-        {
+        if (!isScreenOn) {
             String appName = NotificationBuilder.getAppName(context);
 
             PowerManager.WakeLock wl = pm.newWakeLock(
                     PowerManager.FULL_WAKE_LOCK |
-                    PowerManager.ACQUIRE_CAUSES_WAKEUP |
-                    PowerManager.ON_AFTER_RELEASE,
-                    appName+":"+TAG+":WakeupLock");
+                            PowerManager.ACQUIRE_CAUSES_WAKEUP |
+                            PowerManager.ON_AFTER_RELEASE,
+                    appName + ":" + TAG + ":WakeupLock");
             wl.acquire(10000);
 
             PowerManager.WakeLock wl_cpu = pm.newWakeLock(
                     PowerManager.PARTIAL_WAKE_LOCK,
-                    appName+":"+TAG+":WakeupCpuLock");
+                    appName + ":" + TAG + ":WakeupCpuLock");
             wl_cpu.acquire(10000);
         }
     }
 
     public static void activateCritialAlert(Context context) throws AwesomeNotificationException {
-
-        // TODO implement critical alerts for Android
-        NotificationManager notificationManager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
-        if (notificationManager.isNotificationPolicyAccessGranted()) {
-            notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P /*Android 9*/) {
-                NotificationManager.Policy policy = new NotificationManager.Policy(PRIORITY_CATEGORY_ALARMS, 0, 0);
-                notificationManager.setNotificationPolicy(policy);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            // TODO implement critical alerts for Android
+            NotificationManager notificationManager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
+            if (notificationManager.isNotificationPolicyAccessGranted()) {
+                notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P /*Android 9*/) {
+                    NotificationManager.Policy policy = new NotificationManager.Policy(PRIORITY_CATEGORY_ALARMS, 0, 0);
+                    notificationManager.setNotificationPolicy(policy);
+                }
+            } else {
+                throw new AwesomeNotificationException("Critical Alert mode is not enable");
             }
-        } else {
-            throw new AwesomeNotificationException("Critical Alert mode is not enable");
         }
+
+
     }
 
-    public static void requestCriticalAlerts(Context context){
+    public static void requestCriticalAlerts(Context context) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            // TODO implement critical alerts for Android
+            NotificationManager notificationManager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
 
-        // TODO implement critical alerts for Android
-        NotificationManager notificationManager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
-
-        if (!notificationManager.isNotificationPolicyAccessGranted()) {
-            Intent intent = new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
-            Activity activity = (Activity) context;
-            activity.startActivity(intent);
+            if (!notificationManager.isNotificationPolicyAccessGranted()) {
+                Intent intent = new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
+                Activity activity = (Activity) context;
+                activity.startActivity(intent);
+            }
         }
     }
 
@@ -484,7 +495,7 @@ public class NotificationBuilder {
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, notificationModel.content.channelKey);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O /*Android 8*/){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O /*Android 8*/) {
             NotificationChannel androidChannel = ChannelManager.getAndroidChannel(context, channel.channelKey);
             builder.setChannelId(androidChannel.getId());
         }
@@ -521,15 +532,15 @@ public class NotificationBuilder {
         setLargeIcon(context, notificationModel, builder);
         setLayoutColor(context, notificationModel, channel, builder);
 
-        if(!isSummary)
+        if (!isSummary)
             setBadge(context, channel, builder);
 
         builder.setContentIntent(pendingIntent);
-        if(!isSummary)
+        if (!isSummary)
             builder.setDeleteIntent(deleteIntent);
 
         Notification androidNotification = builder.build();
-        if(androidNotification.extras == null)
+        if (androidNotification.extras == null)
             androidNotification.extras = new Bundle();
 
         updateTrackingExtras(notificationModel, channel, androidNotification.extras);
@@ -584,7 +595,7 @@ public class NotificationBuilder {
     }
 
     private static void setRemoteHistory(NotificationModel notificationModel, NotificationCompat.Builder builder) {
-        if(!StringUtils.isNullOrEmpty(notificationModel.remoteHistory)) {
+        if (!StringUtils.isNullOrEmpty(notificationModel.remoteHistory)) {
             builder.setRemoteInputHistory(new CharSequence[]{notificationModel.remoteHistory});
         }
     }
@@ -708,7 +719,7 @@ public class NotificationBuilder {
 
     public static int decrementGlobalBadgeCounter(Context context) {
 
-        int totalAmount = Math.max(getGlobalBadgeCounter(context)-1, 0);
+        int totalAmount = Math.max(getGlobalBadgeCounter(context) - 1, 0);
         setGlobalBadgeCounter(context, totalAmount);
         return totalAmount;
     }
@@ -739,9 +750,9 @@ public class NotificationBuilder {
 
             // If reply is not available, do not show it
             if (
-                android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.N &&
-                buttonProperties.buttonType == ActionButtonType.InputField
-            ){
+                    android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.N &&
+                            buttonProperties.buttonType == ActionButtonType.InputField
+            ) {
                 continue;
             }
 
@@ -800,8 +811,8 @@ public class NotificationBuilder {
             }
 
             if (
-                buttonProperties.buttonType == ActionButtonType.InputField
-            ){
+                    buttonProperties.buttonType == ActionButtonType.InputField
+            ) {
 
                 RemoteInput remoteInput = new RemoteInput.Builder(buttonProperties.key)
                         .setLabel(buttonProperties.label)
@@ -817,18 +828,18 @@ public class NotificationBuilder {
             } else {
 
                 builder.addAction(
-                    iconResource,
-                    HtmlCompat.fromHtml(
-                        buttonProperties.isDangerousOption ?
-                            "<font color=\"16711680\">" + buttonProperties.label + "</font>" :
-                            (
-                                buttonProperties.color != null ?
-                                    "<font color=\"" + buttonProperties.color.toString() + "\">" + buttonProperties.label + "</font>":
-                                    buttonProperties.label
-                            ),
-                        HtmlCompat.FROM_HTML_MODE_LEGACY
-                    ),
-                    actionPendingIntent);
+                        iconResource,
+                        HtmlCompat.fromHtml(
+                                buttonProperties.isDangerousOption ?
+                                        "<font color=\"16711680\">" + buttonProperties.label + "</font>" :
+                                        (
+                                                buttonProperties.color != null ?
+                                                        "<font color=\"" + buttonProperties.color.toString() + "\">" + buttonProperties.label + "</font>" :
+                                                        buttonProperties.label
+                                        ),
+                                HtmlCompat.FROM_HTML_MODE_LEGACY
+                        ),
+                        actionPendingIntent);
             }
         }
     }
@@ -879,10 +890,10 @@ public class NotificationBuilder {
 
     private void setGrouping(Context context, NotificationModel notificationModel, NotificationChannelModel channelModel, NotificationCompat.Builder builder) {
 
-        if( // Grouping key is reserved to arrange messaging and messaging group layouts
-            notificationModel.content.notificationLayout == NotificationLayout.Messaging ||
-            notificationModel.content.notificationLayout == NotificationLayout.MessagingGroup
-        ){
+        if ( // Grouping key is reserved to arrange messaging and messaging group layouts
+                notificationModel.content.notificationLayout == NotificationLayout.Messaging ||
+                        notificationModel.content.notificationLayout == NotificationLayout.MessagingGroup
+        ) {
             return;
         }
 
@@ -891,17 +902,16 @@ public class NotificationBuilder {
         if (!StringUtils.isNullOrEmpty(groupKey)) {
             builder.setGroup(groupKey);
 
-            if(notificationModel.groupSummary) {
+            if (notificationModel.groupSummary) {
                 builder.setGroupSummary(true);
-            }
-            else {
+            } else {
                 boolean grouped = true;
 
                 NotificationManager manager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
-                StatusBarNotification[] currentActiveNotifications = manager.getActiveNotifications();
+                StatusBarNotification[] currentActiveNotifications = getActiveNotifications(manager);
 
                 for (StatusBarNotification activeNotification : currentActiveNotifications) {
-                    if (activeNotification.getGroupKey().contains("g:"+groupKey)) {
+                    if (activeNotification.getGroupKey().contains("g:" + groupKey)) {
                         grouped = false;
                         break;
                     }
@@ -920,8 +930,7 @@ public class NotificationBuilder {
             builder.setSortKey(sortKey + idText);
 
             builder.setGroupAlertBehavior(channelModel.groupAlertBehavior.ordinal());
-        }
-        else {
+        } else {
             // Prevent Android auto channel grouping for 4+ ungroupded notifications
             builder.setGroup(notificationModel.content.id.toString());
         }
@@ -944,15 +953,18 @@ public class NotificationBuilder {
                 break;
 
             case Messaging:
-                if (setMessagingLayout(context, false, notificationModel.content, channelModel, builder)) return;
+                if (setMessagingLayout(context, false, notificationModel.content, channelModel, builder))
+                    return;
                 break;
 
             case MessagingGroup:
-                if(setMessagingLayout(context, true, notificationModel.content, channelModel, builder)) return;
+                if (setMessagingLayout(context, true, notificationModel.content, channelModel, builder))
+                    return;
                 break;
 
             case MediaPlayer:
-                if (setMediaPlayerLayout(context, notificationModel.content, notificationModel.actionButtons, builder)) return;
+                if (setMediaPlayerLayout(context, notificationModel.content, notificationModel.actionButtons, builder))
+                    return;
                 break;
 
             case ProgressBar:
@@ -1063,7 +1075,7 @@ public class NotificationBuilder {
         return true;
     }
 
-    public static String getGroupKey(NotificationContentModel contentModel, NotificationChannelModel channelModel){
+    public static String getGroupKey(NotificationContentModel contentModel, NotificationChannelModel channelModel) {
         return !StringUtils.isNullOrEmpty(contentModel.groupKey) ?
                 contentModel.groupKey : channelModel.groupKey;
     }
@@ -1076,104 +1088,104 @@ public class NotificationBuilder {
 
         //if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M /*Android 6*/) {
 
-            Notification currentNotification = null;
-            if(!contentModel.isRefreshNotification){
-                String messageQueueKey = groupKey + (isGrouping ? ".Gr" : "");
+        Notification currentNotification = null;
+        if (!contentModel.isRefreshNotification) {
+            String messageQueueKey = groupKey + (isGrouping ? ".Gr" : "");
 
-                List<Notification> notifications = getAllAndroidActiveNotificationsByGroupKey(context, groupKey);
+            List<Notification> notifications = getAllAndroidActiveNotificationsByGroupKey(context, groupKey);
 
-                int messagingNotificationId = -1;
-                String digestedGroupKey = StringUtils.digestString(groupKey);
-                String digestedLayout = StringUtils.digestString(NotificationLayout.Messaging.toString());
+            int messagingNotificationId = -1;
+            String digestedGroupKey = StringUtils.digestString(groupKey);
+            String digestedLayout = StringUtils.digestString(NotificationLayout.Messaging.toString());
 
-                for (Notification notification : notifications) {
-                    String layout = notification.extras.getString(Definitions.NOTIFICATION_LAYOUT);
-                    if(digestedLayout.equals(layout)){
-                        String extraGroupKey = notification.extras.getString(Definitions.NOTIFICATION_GROUP_KEY);
-                        if(digestedGroupKey.equals(extraGroupKey)){
-                            currentNotification = notification;
-                            messagingNotificationId = notification.extras.getInt(
-                                    Definitions.NOTIFICATION_ID);
-                            break;
-                        }
+            for (Notification notification : notifications) {
+                String layout = notification.extras.getString(Definitions.NOTIFICATION_LAYOUT);
+                if (digestedLayout.equals(layout)) {
+                    String extraGroupKey = notification.extras.getString(Definitions.NOTIFICATION_GROUP_KEY);
+                    if (digestedGroupKey.equals(extraGroupKey)) {
+                        currentNotification = notification;
+                        messagingNotificationId = notification.extras.getInt(
+                                Definitions.NOTIFICATION_ID);
+                        break;
                     }
                 }
+            }
 
-                if(messagingNotificationId < 0){
-                    messagingQueue.remove(messageQueueKey);
-                }
-                // For terminated app cases
-                else if(!messagingQueue.containsKey(messageQueueKey) && currentNotification != null){
-                    Serializable messagesData = currentNotification.extras.getSerializable(
-                            Definitions.NOTIFICATION_MESSAGES);
-                    if(messagesData != null ){
-                        contentModel.messages = NotificationContentModel.mapToMessages((List<Map>) messagesData);
-                    } else {
-                        contentModel.messages = new ArrayList<>();
-                    }
-                    contentModel.id = currentNotification.extras.getInt(
-                            Definitions.NOTIFICATION_ID);
-                    messagingQueue.put(messageQueueKey, contentModel);
-                }
-
-                NotificationMessageModel currentMessage = new NotificationMessageModel(
-                        contentModel.title,
-                        contentModel.body,
-                        contentModel.largeIcon
-                );
-
-                if(messagingQueue.containsKey(messageQueueKey)){
-                    NotificationContentModel firstModel = messagingQueue.get(messageQueueKey);
-
-                    contentModel.id = firstModel.id;
-                    contentModel.messages = firstModel.messages;
-                }
-
-                if(contentModel.messages == null){
+            if (messagingNotificationId < 0) {
+                messagingQueue.remove(messageQueueKey);
+            }
+            // For terminated app cases
+            else if (!messagingQueue.containsKey(messageQueueKey) && currentNotification != null) {
+                Serializable messagesData = currentNotification.extras.getSerializable(
+                        Definitions.NOTIFICATION_MESSAGES);
+                if (messagesData != null) {
+                    contentModel.messages = NotificationContentModel.mapToMessages((List<Map>) messagesData);
+                } else {
                     contentModel.messages = new ArrayList<>();
                 }
-
-                contentModel.messages.add(currentMessage);
+                contentModel.id = currentNotification.extras.getInt(
+                        Definitions.NOTIFICATION_ID);
                 messagingQueue.put(messageQueueKey, contentModel);
             }
 
-            NotificationCompat.MessagingStyle messagingStyle =
-                    new NotificationCompat.MessagingStyle(contentModel.summary);
+            NotificationMessageModel currentMessage = new NotificationMessageModel(
+                    contentModel.title,
+                    contentModel.body,
+                    contentModel.largeIcon
+            );
 
-            for(NotificationMessageModel message : contentModel.messages) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P /*Android 9*/) {
+            if (messagingQueue.containsKey(messageQueueKey)) {
+                NotificationContentModel firstModel = messagingQueue.get(messageQueueKey);
 
-                    Person.Builder personBuilder =  new Person.Builder()
-                            .setName(message.title);
+                contentModel.id = firstModel.id;
+                contentModel.messages = firstModel.messages;
+            }
 
-                    if(!StringUtils.isNullOrEmpty(contentModel.largeIcon)){
-                        Bitmap largeIcon = BitmapUtils.getBitmapFromSource(
-                                context,
-                                contentModel.largeIcon);
-                        if(largeIcon != null)
-                            personBuilder.setIcon(
-                                    IconCompat.createWithBitmap(largeIcon));
-                    }
+            if (contentModel.messages == null) {
+                contentModel.messages = new ArrayList<>();
+            }
 
-                    Person person = personBuilder.build();
+            contentModel.messages.add(currentMessage);
+            messagingQueue.put(messageQueueKey, contentModel);
+        }
 
-                    messagingStyle.addMessage(
-                            message.message, message.timestamp, person);
-                } else {
-                    messagingStyle.addMessage(
-                            message.message, message.timestamp, message.title);
+        NotificationCompat.MessagingStyle messagingStyle =
+                new NotificationCompat.MessagingStyle(contentModel.summary);
+
+        for (NotificationMessageModel message : contentModel.messages) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P /*Android 9*/) {
+
+                Person.Builder personBuilder = new Person.Builder()
+                        .setName(message.title);
+
+                if (!StringUtils.isNullOrEmpty(contentModel.largeIcon)) {
+                    Bitmap largeIcon = BitmapUtils.getBitmapFromSource(
+                            context,
+                            contentModel.largeIcon);
+                    if (largeIcon != null)
+                        personBuilder.setIcon(
+                                IconCompat.createWithBitmap(largeIcon));
                 }
-            }
 
-            if (
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.P /*Android 9*/ &&
-                            !StringUtils.isNullOrEmpty(contentModel.summary)
-            ){
-                messagingStyle.setConversationTitle(contentModel.summary);
-                messagingStyle.setGroupConversation(isGrouping);
-            }
+                Person person = personBuilder.build();
 
-            builder.setStyle((NotificationCompat.Style) messagingStyle);
+                messagingStyle.addMessage(
+                        message.message, message.timestamp, person);
+            } else {
+                messagingStyle.addMessage(
+                        message.message, message.timestamp, message.title);
+            }
+        }
+
+        if (
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.P /*Android 9*/ &&
+                        !StringUtils.isNullOrEmpty(contentModel.summary)
+        ) {
+            messagingStyle.setConversationTitle(contentModel.summary);
+            messagingStyle.setGroupConversation(isGrouping);
+        }
+
+        builder.setStyle((NotificationCompat.Style) messagingStyle);
         /*}
         else {
             if(StringUtils.isNullOrEmpty(groupKey)){
